@@ -1,49 +1,91 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/user");
-const redisClient = require("../config/redis")
+const mongoose = require('mongoose');
+const {Schema} = mongoose;
 
-const adminMiddleware = async (req,res,next)=>{
-
-    try{
-       
-        const {token} = req.cookies;
-        if(!token)
-            throw new Error("Token is not persent");
-
-        const payload = jwt.verify(token,process.env.JWT_KEY);
-
-        const {_id} = payload;
-
-        if(!_id){
-            throw new Error("Invalid token");
+const problemSchema = new Schema({
+    title:{
+        type:String,
+        required:true
+    },
+    description:{
+        type:String,
+        required:true
+    },
+    difficulty:{
+        type:String,
+        enum:['easy','medium','hard'],
+        required:true,
+    },
+    tags:{
+        type:String,
+        enum:['array','linkedList','graph','dp'],
+        required:true
+    },
+    visibleTestCases:[
+        {
+            input:{
+                type:String,
+                required:true,
+            },
+            output:{
+                type:String,
+                required:true,
+            },
+            explanation:{
+                type:String,
+                required:true
+            }
         }
+    ],
 
-        const result = await User.findById(_id);
-
-        if(payload.role!='admin')
-            throw new Error("Invalid Token");
-
-        if(!result){
-            throw new Error("User Doesn't Exist");
+    hiddenTestCases:[
+        {
+            input:{
+                type:String,
+                required:true,
+            },
+            output:{
+                type:String,
+                required:true,
+            }
         }
+    ],
 
-        // Redis ke blockList mein persent toh nahi hai
+    startCode: [
+        {
+            language:{
+                type:String,
+                required:true,
+            },
+            initialCode:{
+                type:String,
+                required:true
+            }
+        }
+    ],
 
-        const IsBlocked = await redisClient.exists(`token:${token}`);
+    referenceSolution:[
+        {
+            language:{
+                type:String,
+                required:true,
+            },
+            completeCode:{
+                type:String,
+                required:true
+            }
+        }
+    ],
 
-        if(IsBlocked)
-            throw new Error("Invalid Token");
-
-        req.result = result;
-
-
-        next();
+    problemCreator:{
+        type: Schema.Types.ObjectId,
+        ref:'user',
+        required:true
     }
-    catch(err){
-        res.status(401).send("Error: "+ err.message)
-    }
-
-}
+})
 
 
-module.exports = adminMiddleware;
+const Problem = mongoose.model('problem',problemSchema);
+
+module.exports = Problem;
+
+
